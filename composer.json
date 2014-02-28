@@ -2,7 +2,6 @@
   "name":"rvadym\/google_api_access",
   "type":"exposure",
   "require":{
-    "atk4\/atk4":"4.3.*@dev",
     "google\/apiclient":"dev-master"
   }
 }
