@@ -19,7 +19,7 @@ class Controller_GA extends \AbstractController {
         $m->load($id);
 
         if (isset($_GET['code'])) {
-            $this->authenticate($_GET['code'],$m); // just returned from google
+            $this->authenticate($_GET['code']); // just returned from google
             // redirect
         }
 
@@ -50,17 +50,17 @@ class Controller_GA extends \AbstractController {
         return $this->getClient()->createAuthUrl();
     }
 
-    private function authenticate($code,$m) {
+    private function authenticate($code) {
         $this->getClient()->authenticate($code);
         $this->saveAccess($this->getClient()->getAccessToken());
-        $this->hook('before-authenticate-redirect',array($m));
+        $this->hook('before-authenticate-redirect');
         $this->api->redirect($this->api->url());
     }
 
     private function refreshToken($m) {
         $this->getOAuth()->refreshToken($m['refresh_token']);
         $this->saveAccess($this->getOAuth()->getAccessToken());
-        $this->hook('before-refreshToken-redirect',array($m));
+        $this->hook('before-refreshToken-redirect');
         $this->api->redirect($this->api->url());
     }
 
