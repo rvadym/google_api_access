@@ -7,38 +7,61 @@ namespace rvadym\google_api_access;
 class Controller_GA extends \AbstractController {
 
     public $redirect_url;
+    public $model_class = 'rvadym\\google_api_access\\Model_Access';
+    public $scope = array();
 
     function init() {
         parent::init();
     }
 
-    function checkAuth() {
+    function checkAuth($id) {
         $m = $this->getAccessModel();
-        $m->tryLoadAny();
-        if ($this->getOAuth()->isAccessTokenExpired()) {
-            if (isset($_GET['code'])) {
-                $this->getClient()->authenticate($_GET['code']);
-                $this->saveAccess($this->getClient()->getAccessToken());
-                $this->api->redirect($this->api->url());
+        $m->load($id);
+
+        if (isset($_GET['code'])) {
+            $this->authenticate($_GET['code'],$m); // just returned from google
+            // redirect
+        }
+
+        if ($m['token']) {
+            $this->getClient()->setAccessToken($m['token']);
+        }
+
+        if ($this->getClient()->isAccessTokenExpired()) {
+            if ($m['refresh_token']) {
+                $this->refreshToken($m);
+                // redirect
+            } else {
+                return array('login_url'=>$this->createAuthUrl()); // need to go to google
             }
-            else if ($m->loaded() && isset($m['token'])) {
-                $this->getClient()->setAccessToken($m['token']);
-                if ($this->getClient()->isAccessTokenExpired()) {
-                    $this->getOAuth()->refreshToken($m['refresh_token']);
-                    $this->saveAccess($this->getOAuth()->getAccessToken());
-                    $this->api->redirect($this->api->url());
-                }
-            }
-            else {
-                $this->getClient()->addScope(array(
-                    'https://www.googleapis.com/auth/analytics',
-                    //'https://www.googleapis.com/auth/analytics.edit',
-                    'https://www.googleapis.com/auth/analytics.readonly',
-                ));
-                return array('login_url'=>$this->getClient()->createAuthUrl());
-            }
+        }
+
+        if ($m['token']) {
+            $this->getClient()->setAccessToken($m['token']); // <~ OK, target!
+            $this->hook('after-setAccessToken');
             return array();
         }
+
+        return array('login_url'=>$this->createAuthUrl()); // need to go to google
+    }
+
+    private function createAuthUrl() {
+        $this->getClient()->addScope($this->scope);
+        return $this->getClient()->createAuthUrl();
+    }
+
+    private function authenticate($code,$m) {
+        $this->getClient()->authenticate($code);
+        $this->saveAccess($this->getClient()->getAccessToken());
+        $this->hook('before-authenticate-redirect',array($m));
+        $this->api->redirect($this->api->url());
+    }
+
+    private function refreshToken($m) {
+        $this->getOAuth()->refreshToken($m['refresh_token']);
+        $this->saveAccess($this->getOAuth()->getAccessToken());
+        $this->hook('before-refreshToken-redirect',array($m));
+        $this->api->redirect($this->api->url());
     }
 
     private function saveAccess($token) {
@@ -62,18 +85,8 @@ class Controller_GA extends \AbstractController {
         return $this;
     }
 
-    // google oAuth singletone
-    private $oAuth = null;
     function getOAuth() {
-        if (!$this->oAuth) {
-            $this->_getOAuth();
-        }
-        return $this->oAuth;
-    }
-    private function _getOAuth() {
-        $this->oAuth = new \Google_Auth_OAuth2($this->getClient());
-        $this->getClient()->setClassConfig($this->oAuth,'approval_prompt','force');
-        $this->getClient()->setClassConfig($this->oAuth,'response_type','code');
+        return $this->getClient()->getAuth();
     }
 
     // google client singletone
@@ -94,6 +107,8 @@ class Controller_GA extends \AbstractController {
         $this->google_client->setClientSecret($client_secret);
         $this->google_client->setRedirectUri($this->redirect_url);
         $this->google_client->setAccessType('offline');
+        $this->google_client->setClassConfig('Google_Auth_OAuth2','approval_prompt','force');
+        $this->google_client->setClassConfig('Google_Auth_OAuth2','response_type','code');
         $this->google_client->setApplicationName("ATK4 Google API Addon");
         $this->google_client->setDeveloperKey($dev_key);
     }
@@ -107,6 +122,6 @@ class Controller_GA extends \AbstractController {
         return $this->access_model;
     }
     private function _getAccessModel() {
-        $this->access_model = $this->add('rvadym\\google_api_access\\Model_Access');
+        $this->access_model = $this->add($this->model_class);
     }
 }
