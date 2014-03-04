@@ -14,11 +14,14 @@ class Controller_GA extends \AbstractController {
         parent::init();
     }
 
-    function checkAuth($id) {
+    function checkAuth($id,$cli=false) {
         $m = $this->getAccessModel();
         $m->load($id);
 
         if (isset($_GET['code'])) {
+            if ($cli) {
+                throw $this->exception('Cannot authenticate() with CLI','rvadym\\google_api_access\\Exception_NotCLIAction');
+            }
             $this->authenticate($_GET['code']); // just returned from google
             // redirect
         }
@@ -29,10 +32,12 @@ class Controller_GA extends \AbstractController {
 
         if ($this->getClient()->isAccessTokenExpired()) {
             if ($m['refresh_token']) {
-                $this->refreshToken($m);
+                $this->refreshToken($m,$cli);
                 // redirect
-            } else {
+            } else if (!$cli) {
                 return array('login_url'=>$this->createAuthUrl()); // need to go to google
+            } else {
+                throw $this->exception('Refresh token is not set! (CLI) 1','rvadym\\google_api_access\\Exception_NotCLIAction');
             }
         }
 
@@ -42,6 +47,9 @@ class Controller_GA extends \AbstractController {
             return array();
         }
 
+        if ($cli) {
+            throw $this->exception('Refresh token is not set! (CLI) 2','rvadym\\google_api_access\\Exception_NotCLIAction');
+        }
         return array('login_url'=>$this->createAuthUrl()); // need to go to google
     }
 
@@ -57,11 +65,11 @@ class Controller_GA extends \AbstractController {
         $this->api->redirect($this->api->url());
     }
 
-    private function refreshToken($m) {
+    private function refreshToken($m,$cli) {
         $this->getOAuth()->refreshToken($m['refresh_token']);
         $this->saveAccess($this->getOAuth()->getAccessToken());
         $this->hook('before-refreshToken-redirect');
-        $this->api->redirect($this->api->url());
+        if (!$cli) $this->api->redirect($this->api->url());
     }
 
     private function saveAccess($token) {
