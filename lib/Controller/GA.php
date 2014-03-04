@@ -23,7 +23,7 @@ class Controller_GA extends \AbstractController {
                 throw $this->exception('Cannot authenticate() with CLI','rvadym\\google_api_access\\Exception_NotCLIAction');
             }
             $this->authenticate($_GET['code']); // just returned from google
-            // redirect
+            return true;
         }
 
         if ($m['token']) {
@@ -62,7 +62,8 @@ class Controller_GA extends \AbstractController {
         $this->getClient()->authenticate($code);
         $this->saveAccess($this->getClient()->getAccessToken());
         $this->hook('before-authenticate-redirect');
-        $this->api->redirect($this->api->url());
+        //$this->api->redirect($this->api->url());
+        return true;
     }
 
     private function refreshToken($m,$cli) {
@@ -124,14 +125,18 @@ class Controller_GA extends \AbstractController {
     }
 
     // access model singletone
-    private $access_model = null;
+    protected $access_model = null;
     function getAccessModel() {
+        /*
         if (!$this->access_model) {
             $this->_getAccessModel();
         }
+         */
         return $this->access_model;
     }
+    /*
     private function _getAccessModel() {
         $this->access_model = $this->add($this->model_class);
     }
+     */
 }

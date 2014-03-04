@@ -11,9 +11,6 @@ class Model_Access extends \Model_Table {
 
         $this->addField('name');
 
-        // ga
-        $this->addField('token');
-        $this->addField('refresh_token');
     }
 
 
@@ -24,15 +21,4 @@ class Model_Access extends \Model_Table {
         "refresh_token":"1\/oX10GiLqClr-kKKtq54YpN3XgQ3a_fGUmxXl7LpQ_Xg",
         "created":1393506916
     } */
-    function getRefreshToken($token,$throw=true) {
-        $arr = json_decode($token,true);
-        if (!isset($arr['refresh_token'])) {
-            if ($throw) {
-                throw $this->exception('There is no refresh_token in json.');
-            } else {
-                return false;
-            }
-        }
-        return $arr['refresh_token'];
-    }
 }
