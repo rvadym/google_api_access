@@ -74,7 +74,7 @@ class Controller_GA extends \AbstractController {
 
     private function saveAccess($token) {
         $m = $this->getAccessModel();
-        $m->set('name','this is name');
+        //$m->set('name','this is name');
         $m->set('token',$token);
         if ($refresh_token = $m->getRefreshToken($token,false)) {
             $m->set('refresh_token',$refresh_token);
