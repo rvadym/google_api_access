@@ -12,11 +12,11 @@ class Controller_GA extends \AbstractController {
 
     function init() {
         parent::init();
+        if(!$this->getAccessModel()->loaded())throw $this->exception('Must load access_model first');
     }
 
-    function checkAuth($id,$cli=false) {
+    function checkAuth($cli=false) {
         $m = $this->getAccessModel();
-        $m->load($id);
 
         if (isset($_GET['code'])) {
             if ($cli) {
@@ -43,7 +43,6 @@ class Controller_GA extends \AbstractController {
 
         if ($m['token']) {
             $this->getClient()->setAccessToken($m['token']); // <~ OK, target!
-            $this->hook('after-setAccessToken');
             return array();
         }
 
@@ -61,16 +60,12 @@ class Controller_GA extends \AbstractController {
     private function authenticate($code) {
         $this->getClient()->authenticate($code);
         $this->saveAccess($this->getClient()->getAccessToken());
-        $this->hook('before-authenticate-redirect');
-        //$this->api->redirect($this->api->url());
         return true;
     }
 
     private function refreshToken($m,$cli) {
         $this->getOAuth()->refreshToken($m['refresh_token']);
         $this->saveAccess($this->getOAuth()->getAccessToken());
-        $this->hook('before-refreshToken-redirect');
-        if (!$cli) $this->api->redirect($this->api->url());
     }
 
     private function saveAccess($token) {
@@ -127,16 +122,6 @@ class Controller_GA extends \AbstractController {
     // access model singletone
     protected $access_model = null;
     function getAccessModel() {
-        /*
-        if (!$this->access_model) {
-            $this->_getAccessModel();
-        }
-         */
         return $this->access_model;
     }
-    /*
-    private function _getAccessModel() {
-        $this->access_model = $this->add($this->model_class);
-    }
-     */
 }
